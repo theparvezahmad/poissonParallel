@@ -1,0 +1,1 @@
+This project compares different parallelization techniques
