@@ -103,13 +103,14 @@ int main(int argc, char **argv)
     {
       if (i == myCoord[k])
       {
-        bs[k] = tArr[i][0];
-        es[k] = tArr[i][1];
+        bs[k] = tArr[i][0] - 1;
+        es[k] = tArr[i][1] - 1;
         siz[k] = tArr[i][2];
       }
     }
     bn[k] = bs[k];
     en[k] = es[k];
+
     if ((west && k == 0) || (south && k == 1) || (bottom && k == 2))
     {
       bn[k] = bs[k] + 1;
@@ -119,6 +120,9 @@ int main(int argc, char **argv)
       en[k] = es[k] - 1;
     }
   }
+
+  // cout << id << " " << bs[2] << " " << es[2] << " " << siz[2] << endl;
+  // return 0;
 
   MPI_Type_vector(siz[1], 1, nP[0], MPI_DOUBLE_PRECISION, &liney);
   MPI_Type_commit(&liney);
@@ -201,8 +205,8 @@ int main(int argc, char **argv)
       }
     }
 
-    double sendBuf[2];
-    double recvBuf[2];
+    // double sendBuf[2];
+    // double recvBuf[2];
 
     MPI_Sendrecv(&u[en[0]][bn[1]][bn[2]], 1, planeyz, dest[0], 50, &u[bn[0] - 1][bn[1]][bn[2]], 1, planeyz, src[0], 50, MPI_COMM_WORLD, &STATUS);
     MPI_Sendrecv(&u[bn[0]][bn[1]][bn[2]], 1, planeyz, src[0], 50, &u[en[0] + 1][bn[1]][bn[2]], 1, planeyz, dest[0], 50, MPI_COMM_WORLD, &STATUS);
