@@ -6,7 +6,7 @@ SRCS := $(SRC_DIR)main.cpp
 
 OBJS := ${SRCS:$(SRC_DIR)%.cpp=$(BUILD_DIR)%.o}
 
-FC := mpiicc -check-pointers=rw -traceback -g# -g -CB -fpe0 -warn -traceback# -cc=icx #fortran compiler
+FC := mpiicc -diag-disable=10441# -g -CB -fpe0 -warn -traceback# -cc=icx #fortran compiler
 FFLAGS :=# -CB -traceback# -xCORE-AVX2# -qopenmp #-CB -traceback
 # FFLAGS :=-qmkl -g -check all -fpe0 -warn -traceback -debug extended
 # FC := gfortran

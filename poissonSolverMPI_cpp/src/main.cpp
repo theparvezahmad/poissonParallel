@@ -12,7 +12,7 @@ int main(int argc, char **argv)
   // bool period[3] = {false, false, false};
   int period[3] = {0, 0, 0};
   int domMPI[3] = {2, 2, 2};
-  int nP[3] = {51, 51, 48};
+  int nP[3] = {50, 50, 50};
   double pStart[3] = {0.0, 0.0, 0.0};
   double pEnd[3] = {1.0, 1.0, 1.0};
   double tol = 1e-4;
@@ -45,8 +45,10 @@ int main(int argc, char **argv)
   int **ee;
   MPI_Status STATUS;
 
-  double ***u;
-  double ***f;
+  double u[nP[0]][nP[1]][nP[2]];
+  double f[nP[0]][nP[1]][nP[2]];
+  // double ***u;
+  // double ***f;
   double t1, t2, t3, res, totRes[2], lhs, rhs, it1, it2, dx[3];
 
   MPI_Init(&argc, &argv);
@@ -124,15 +126,26 @@ int main(int argc, char **argv)
   // cout << id << " " << bs[2] << " " << es[2] << " " << siz[2] << endl;
   // return 0;
 
-  MPI_Type_vector(siz[1], 1, nP[0], MPI_DOUBLE_PRECISION, &liney);
+  // MPI_Type_vector(siz[1], 1, nP[0], MPI_DOUBLE_PRECISION, &liney);
+  // MPI_Type_commit(&liney);
+  // MPI_Type_extent(MPI_DOUBLE_PRECISION, &sizDP);
+  // MPI_Type_hvector(siz[2], 1, nP[0] * nP[1] * sizDP, liney, &planeyz);
+  // MPI_Type_commit(&planeyz);
+  // MPI_Type_vector(siz[2], siz[0], nP[0] * nP[1], MPI_DOUBLE_PRECISION, &planexz);
+  // MPI_Type_commit(&planexz);
+  // MPI_Type_vector(siz[1], siz[0], nP[0], MPI_DOUBLE_PRECISION, &planexy);
+  // MPI_Type_commit(&planexy);
+
+  MPI_Type_vector(siz[1], 1, nP[2], MPI_DOUBLE_PRECISION, &liney);
   MPI_Type_commit(&liney);
   MPI_Type_extent(MPI_DOUBLE_PRECISION, &sizDP);
-  MPI_Type_hvector(siz[2], 1, nP[0] * nP[1] * sizDP, liney, &planeyz);
-  MPI_Type_vector(siz[2], siz[0], nP[0] * nP[1], MPI_DOUBLE_PRECISION, &planexz);
-  MPI_Type_vector(siz[1], siz[0], nP[0], MPI_DOUBLE_PRECISION, &planexy);
-  MPI_Type_commit(&planeyz);
-  MPI_Type_commit(&planexz);
+  MPI_Type_hvector(siz[0], 1, nP[2] * nP[1] * sizDP, liney, &planexy);
   MPI_Type_commit(&planexy);
+  MPI_Type_vector(siz[0], siz[2], nP[2] * nP[1], MPI_DOUBLE_PRECISION, &planexz);
+  MPI_Type_commit(&planexz);
+  MPI_Type_vector(siz[1], siz[2], nP[2], MPI_DOUBLE_PRECISION, &planeyz);
+  MPI_Type_commit(&planeyz);
+
   MPI_Barrier(MPI_COMM_WORLD);
 
   x[0].p = new double[nP[0]];
@@ -160,18 +173,18 @@ int main(int argc, char **argv)
     x[2].p[i] = x[2].p[i - 1] + dx[2];
   }
 
-  u = new double **[nP[0]];
-  f = new double **[nP[0]];
-  for (i = 0; i < nP[0]; i++)
-  {
-    u[i] = new double *[nP[1]];
-    f[i] = new double *[nP[1]];
-    for (j = 0; j < nP[1]; j++)
-    {
-      u[i][j] = new double[nP[2]];
-      f[i][j] = new double[nP[2]];
-    }
-  }
+  // u = new double **[nP[0]];
+  // f = new double **[nP[0]];
+  // for (i = 0; i < nP[0]; i++)
+  // {
+  //   u[i] = new double *[nP[1]];
+  //   f[i] = new double *[nP[1]];
+  //   for (j = 0; j < nP[1]; j++)
+  //   {
+  //     u[i][j] = new double[nP[2]];
+  //     f[i][j] = new double[nP[2]];
+  //   }
+  // }
 
   for (i = bs[0]; i <= es[0]; i++)
   {
@@ -194,19 +207,16 @@ int main(int argc, char **argv)
   while (true)
   {
     cnt = cnt + 1;
-    for (k = bn[2]; k <= en[2]; k++)
+    for (i = bn[0]; i <= en[0]; i++)
     {
       for (j = bn[1]; j <= en[1]; j++)
       {
-        for (i = bn[0]; i <= en[0]; i++)
+        for (k = bn[2]; k <= en[2]; k++)
         {
           u[i][j][k] = (1 - w) * u[i][j][k] + w * ((u[i - 1][j][k] + u[i + 1][j][k]) * t1 + (u[i][j - 1][k] + u[i][j + 1][k]) * t2 + (u[i][j][k - 1] + u[i][j][k + 1]) * t3 - f[i][j][k]) / (2 * (t1 + t2 + t3));
         }
       }
     }
-
-    // double sendBuf[2];
-    // double recvBuf[2];
 
     MPI_Sendrecv(&u[en[0]][bn[1]][bn[2]], 1, planeyz, dest[0], 50, &u[bn[0] - 1][bn[1]][bn[2]], 1, planeyz, src[0], 50, MPI_COMM_WORLD, &STATUS);
     MPI_Sendrecv(&u[bn[0]][bn[1]][bn[2]], 1, planeyz, src[0], 50, &u[en[0] + 1][bn[1]][bn[2]], 1, planeyz, dest[0], 50, MPI_COMM_WORLD, &STATUS);
@@ -217,21 +227,20 @@ int main(int argc, char **argv)
 
     res = 0.0;
     totRes[1] = totRes[0];
-    for (k = bn[2]; k <= en[2]; k++)
+    // cout << id << " " << sizeof(***u) << endl;
+    for (i = bn[0]; i <= en[0]; i++)
     {
       for (j = bn[1]; j <= en[1]; j++)
       {
-        for (i = bn[0]; i <= en[0]; i++)
+        for (k = bn[2]; k <= en[2]; k++)
         {
-          lhs = (u[i - 1][j][k] + u[i + 1][j][k]) * t1 +
-                (u[i][j - 1][k] + u[i][j + 1][k]) * t2 +
-                (u[i][j][k - 1] + u[i][j][k + 1]) * t3 -
-                2 * u[i][j][k] * (t1 + t2 + t3);
+          lhs = (u[i - 1][j][k] + u[i + 1][j][k]) * t1 + (u[i][j - 1][k] + u[i][j + 1][k]) * t2 + (u[i][j][k - 1] + u[i][j][k + 1]) * t3 - 2.0 * u[i][j][k] * (t1 + t2 + t3);
           rhs = -5.0;
           res = res + (lhs - rhs);
         }
       }
     }
+    // return 0;
 
     MPI_Reduce(&res, &totRes[0], 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, MPI_COMM_WORLD);
     totRes[0] = abs(totRes[0] / (nP[0] * nP[1] * nP[2]));
@@ -278,20 +287,20 @@ int main(int argc, char **argv)
 
   file.close();
 
-  MPI_Gather(&bs[1], 3, MPI_INT, bb[0], 3, MPI_INT, 0, MPI_COMM_WORLD);
-  MPI_Gather(&es[1], 3, MPI_INT, ee[0], 3, MPI_INT, 0, MPI_COMM_WORLD);
+  // MPI_Gather(&bs[0], 3, MPI_INT, &bb[0][0], 3, MPI_INT, 0, MPI_COMM_WORLD);
+  // MPI_Gather(&es[0], 3, MPI_INT, &ee[0][0], 3, MPI_INT, 0, MPI_COMM_WORLD);
 
-  if (id == 0)
-  {
-    ofstream domInfo("domInfo.txt");
-    domInfo << nP[0] << " " << nP[1] << " " << nP[2] << endl;
-    domInfo << nproc << endl;
-    for (i = 0; i < nproc; i++)
-    {
-      domInfo << bb[0][i] << " " << ee[0][i] << " " << bb[1][i] << " " << ee[1][i] << " " << bb[2][i] << " " << ee[2][i] << endl;
-    }
-    domInfo.close();
-  }
+  // if (id == 0)
+  // {
+  //   ofstream domInfo("domInfo.txt");
+  //   domInfo << nP[0] << " " << nP[1] << " " << nP[2] << endl;
+  //   domInfo << nproc << endl;
+  //   for (i = 0; i < nproc; i++)
+  //   {
+  //     domInfo << bb[0][i] << " " << ee[0][i] << " " << bb[1][i] << " " << ee[1][i] << " " << bb[2][i] << " " << ee[2][i] << endl;
+  //   }
+  //   domInfo.close();
+  // }
 
   MPI_Type_free(&planeyz);
   MPI_Type_free(&planexz);
